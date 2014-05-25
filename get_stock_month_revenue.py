@@ -2,10 +2,16 @@
 # -*- coding: utf-8 -*-
 
 #
-#        Goal: fetch month revenue for taiwan stock market 
-#       Usage: ./get_stock_month_revenue.py -i <id> -s <startyearmon> -e <endyearmon>
-# Observe url: http://mops.twse.com.tw/mops/web/t05st10 
-#     License: MIT, Copyright (c) 2014 Enzo Wang
+#        GOAL: fetch month revenue for taiwan stock month 
+#       USAGE: ./get_stock_month_revenue.py -i <id> -s <startyearmon> -e <endyearmon>
+# OBSERVE URL: http://mops.twse.com.tw/mops/web/t05st10 
+#   DB FORMAT:
+#
+#      id   年月  本月  去年同期 年增率 本年累計 去年累計 年增率
+#     ---------------------------------------------------------------
+#       1  10102  xxxx    yyyy    aaaa     bbbb   cccc     dddd
+#
+#     LICENSE: MIT, Copyright (c) 2014 Enzo Wang
 #    
 #    Permission is hereby granted, free of charge, to any person
 #    obtaining a copy of this software and associated documentation
@@ -42,7 +48,7 @@ start_month = 0
 end_year = 0
 end_month = 0
 fn='fetch_data.html'
-tbln="mr" # "mr" stanfs for "month revenue"
+tbln="mr" # "mr" stands for "month revenue"
 
 def arg_check(argv):
     stockid = 0
@@ -95,17 +101,19 @@ def db_connect(name):
             "yearmonth INTEGER NOT NULL, "
             "month INTEGER NOT NULL, "
             "premonth INTEGER NOT NULL, "
+            "monthgain REAL NOT NULL, "
             "accumonth INTEGER NOT NULL, "
-            "preaccumonth INTEGER NOT NULL) ")
+            "preaccumonth INTEGER NOT NULL, "
+            "accumonthgain REAL NOT NULL) ")
         conn.commit()
     return conn
 
 def db_add(conn, yearmonth, month, premonth, accumonth, preaccumonth):
     cursor = conn.cursor()
     cursor.execute("INSERT INTO " + tbln + " "
-                    "(yearmonth, month, premonth, accumonth, preaccumonth) "
-                    "VALUES (?, ?, ?, ?, ?)",
-                    (yearmonth, month, premonth, accumonth, preaccumonth))
+                    "(yearmonth, month, premonth, monthgain, accumonth, preaccumonth, accumonthgain) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (yearmonth, month, premonth, round(float(month)/premonth-1,2), accumonth, preaccumonth, round(float(accumonth)/preaccumonth-1,2)))
     conn.commit()
 
 def db_is_existed(conn, yearmonth):
@@ -140,11 +148,6 @@ def hasConsolidatedRevenue():
 
 #
 # get desired data
-#
-# db format:
-#  id  yearmonth  本月  去年同期 本年累計 去年累計
-# ------------------------------------------------
-#   1    10102    xxxx    yyyy    aaaa     bbbb
 #
 def getData(items_):
     soup = BeautifulSoup(open(fn))
